@@ -7,9 +7,10 @@ const Product = sequelize.define("product", {
         allowNull: false,
         defaultValue: [],
     },
-    videoLink: {
-        type: DataTypes.STRING,
-        allowNull: true,
+    videoLinks: {
+        type: DataTypes.JSON,
+        defaultValue: [],
+        allowNull: false,
     },
     description: {
         type: DataTypes.TEXT,

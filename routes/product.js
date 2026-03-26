@@ -8,24 +8,37 @@ router.post("/products", upload.fields([
   { name: 'attachedImages', maxCount: 20 }
 ]), async (req, res) => {
   try {
-    const { videoLink, description, size, colors, attachedVideos } = req.body;
-    
-    // Parse attached videos if it's sent as a JSON string from client
+    const { description, size, colors, attachedVideos } = req.body;
+
+    let videoLinks = [];
+    if (req.body.videoLinks) {
+      try {
+        videoLinks = typeof req.body.videoLinks === 'string'
+          ? JSON.parse(req.body.videoLinks)
+          : req.body.videoLinks;
+        
+        if (!Array.isArray(videoLinks)) videoLinks = [videoLinks];
+      } catch (e) {
+        videoLinks = [req.body.videoLinks];
+      }
+    }
+
     let parsedVideos = [];
     if (attachedVideos) {
       try {
         parsedVideos = typeof attachedVideos === 'string' ? JSON.parse(attachedVideos) : attachedVideos;
+        if (!Array.isArray(parsedVideos)) parsedVideos = [parsedVideos];
       } catch (e) {
         parsedVideos = [attachedVideos];
       }
     }
 
-    const images = req.files['images'] ? req.files['images'].map(file => file.filename) : [];
-    const attachedImages = req.files['attachedImages'] ? req.files['attachedImages'].map(file => file.filename) : [];
+    const images = req.files['images']?.map(f => f.filename) || [];
+    const attachedImages = req.files['attachedImages']?.map(f => f.filename) || [];
 
     const product = await Product.create({
       images,
-      videoLink,
+      videoLinks,
       description,
       size,
       colors,
@@ -74,7 +87,6 @@ router.delete("/products/:id", async (req, res) => {
   }
 });
 
-// Update product to add media later
 router.put("/products/:id/media", upload.fields([
   { name: 'attachedImages', maxCount: 20 }
 ]), async (req, res) => {
@@ -82,22 +94,38 @@ router.put("/products/:id/media", upload.fields([
     const product = await Product.findByPk(req.params.id);
     if (!product) return res.status(404).json({ error: "Product not found" });
 
-    const newAttachedImages = req.files['attachedImages'] ? req.files['attachedImages'].map(file => file.filename) : [];
-    
+    let newVideoLinks = [];
+    if (req.body.videoLinks) {
+      try {
+        newVideoLinks = typeof req.body.videoLinks === 'string'
+          ? JSON.parse(req.body.videoLinks)
+          : req.body.videoLinks;
+        if (!Array.isArray(newVideoLinks)) newVideoLinks = [newVideoLinks];
+      } catch (e) {
+        newVideoLinks = [req.body.videoLinks];
+      }
+    }
+
+    const newAttachedImages = req.files['attachedImages']?.map(f => f.filename) || [];
+
     let newAttachedVideos = [];
     if (req.body.attachedVideos) {
       try {
-        newAttachedVideos = typeof req.body.attachedVideos === 'string' ? JSON.parse(req.body.attachedVideos) : req.body.attachedVideos;
+        newAttachedVideos = typeof req.body.attachedVideos === 'string'
+          ? JSON.parse(req.body.attachedVideos)
+          : req.body.attachedVideos;
+        if (!Array.isArray(newAttachedVideos)) newAttachedVideos = [newAttachedVideos];
       } catch (e) {
         newAttachedVideos = [req.body.attachedVideos];
       }
     }
 
-    product.attachedImages = [...(product.attachedImages || []), ...newAttachedImages];
-    product.attachedVideos = [...(product.attachedVideos || []), ...newAttachedVideos];
+    product.videoLinks      = [...(product.videoLinks || []), ...newVideoLinks];
+    product.attachedImages  = [...(product.attachedImages || []), ...newAttachedImages];
+    product.attachedVideos  = [...(product.attachedVideos || []), ...newAttachedVideos];
 
     await product.save();
-    res.status(200).json({ message: "Product media updated successfully", product });
+    res.status(200).json({ message: "Updated successfully", product });
 
   } catch (err) {
     console.error("❌ Error updating product media:", err);
