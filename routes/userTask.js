@@ -139,5 +139,41 @@ router.post("/tasks/download", async (req, res) => {
   }
 });
 
+router.get("/users/status", async (req, res) => {
+  try {
+    const users = await User.findAll({
+      where: { role: "user" },
+      include: [{ 
+        model: UserTask, 
+        as: "tasks",
+        include: [{ model: Product, as: "product" }] 
+      }],
+      order: [["createdAt", "DESC"]]
+    });
+
+    const userStatuses = users.map(user => {
+      const tasks = user.tasks || [];
+      const totalTasks = tasks.length;
+      const completedTasks = tasks.filter(t => t.isCompleted).length;
+
+      const hasCompletedAll = totalTasks > 0 && totalTasks === completedTasks;
+
+      return {
+        id: user.id,
+        name: user.name,
+        phone: user.phone,
+        totalTasks,
+        completedTasks,
+        hasCompletedAll,
+        tasks
+      };
+    });
+
+    res.status(200).json({ users: userStatuses });
+  } catch (err) {
+    console.error("❌ Error fetching user task statuses:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
 
 module.exports = router;
