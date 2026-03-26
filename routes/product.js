@@ -90,9 +90,7 @@ router.delete("/products/:id", async (req, res) => {
   }
 });
 
-router.put("/products/:id/media", upload.fields([
-  { name: 'attachedImages', maxCount: 20 }
-]), async (req, res) => {
+router.put("/products/:id/media", upload.any(), async (req, res) => {
   try {
     const product = await Product.findByPk(req.params.id);
     if (!product) return res.status(404).json({ error: "Product not found" });
@@ -109,7 +107,9 @@ router.put("/products/:id/media", upload.fields([
       }
     }
 
-    const newAttachedImages = req.files['attachedImages']?.map(f => f.filename) || [];
+    const newAttachedImages = req.files
+      .filter(f => f.fieldname === 'attachedImages')
+      .map(f => f.filename);
 
     let newAttachedVideos = [];
     if (req.body.attachedVideos) {
@@ -123,15 +123,52 @@ router.put("/products/:id/media", upload.fields([
       }
     }
 
-    product.videoLinks      = [...(product.videoLinks || []), ...newVideoLinks];
-    product.attachedImages  = [...(product.attachedImages || []), ...newAttachedImages];
-    product.attachedVideos  = [...(product.attachedVideos || []), ...newAttachedVideos];
+    product.videoLinks     = [...(product.videoLinks || []), ...newVideoLinks];
+    product.attachedImages = [...(product.attachedImages || []), ...newAttachedImages];
+    product.attachedVideos = [...(product.attachedVideos || []), ...newAttachedVideos];
 
     await product.save();
     res.status(200).json({ message: "Updated successfully", product });
 
   } catch (err) {
     console.error("❌ Error updating product media:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+router.delete("/products/:id/media", async (req, res) => {
+  try {
+    const product = await Product.findByPk(req.params.id);
+    if (!product) return res.status(404).json({ error: "Product not found" });
+
+    const { type, value } = req.body;
+    if (!type || !value) {
+      return res.status(400).json({ error: "type و value مطلوبان" });
+    }
+
+    const allowed = ["images", "attachedImages", "videoLinks", "attachedVideos"];
+    if (!allowed.includes(type)) {
+      return res.status(400).json({ error: "type غير صالح" });
+    }
+
+    const current = product[type] || [];
+    const updated = current.filter(item => item !== value);
+
+    if (current.length === updated.length) {
+      return res.status(404).json({ error: "العنصر غير موجود في القائمة" });
+    }
+
+    product[type] = updated;
+    await product.save();
+
+    res.status(200).json({
+      message: "تم الحذف بنجاح",
+      deleted: value,
+      [type]: product[type]
+    });
+
+  } catch (err) {
+    console.error("❌ Error deleting media:", err);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
