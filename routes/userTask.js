@@ -88,7 +88,7 @@ router.get("/tasks/daily", async (req, res) => {
 
 router.post("/tasks/download", async (req, res) => {
   try {
-    const { taskId, mediaUrl } = req.body; // mediaUrl could be a video link or an image filename
+    const { taskId, mediaUrl } = req.body;
 
     if (!taskId || !mediaUrl) {
       return res.status(400).json({ error: "taskId and mediaUrl are required" });
@@ -103,24 +103,26 @@ router.post("/tasks/download", async (req, res) => {
     let downloadedMedia = task.downloadedMedia || [];
 
     if (!downloadedMedia.includes(mediaUrl)) {
-      downloadedMedia.push(mediaUrl);
+      downloadedMedia = [...downloadedMedia, mediaUrl]; 
       task.downloadedMedia = downloadedMedia;
+      task.changed('downloadedMedia', true);
     }
 
-    // Check if the task is completed
     const product = task.product;
+    
+    await task.save();
+
+
     const requiredImages = product.attachedImages || [];
     const requiredVideos = product.attachedVideos || [];
     
     const allRequiredMedia = [...requiredImages, ...requiredVideos];
 
-    // the task is completed if every item in allRequiredMedia is found in downloadedMedia
     const isCompleted = allRequiredMedia.every(media => downloadedMedia.includes(media));
     
     task.isCompleted = isCompleted;
     await task.save();
 
-    // The user requested to be sent back the product and whether it has been completed
     res.status(200).json({ 
       message: "Media download registered", 
       task: {
