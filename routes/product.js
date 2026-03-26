@@ -3,12 +3,17 @@ const { Product } = require("../models");
 const router = express.Router();
 const upload = require("../middlewares/uploads");
 
-router.post("/products", upload.fields([
-  { name: 'images', maxCount: 5 },
-  { name: 'attachedImages', maxCount: 20 }
-]), async (req, res) => {
+router.post("/products", upload.any(), async (req, res) => {
   try {
     const { description, size, colors, attachedVideos } = req.body;
+
+    const images = req.files
+      .filter(f => f.fieldname === 'images')
+      .map(f => f.filename);
+
+    const attachedImages = req.files
+      .filter(f => f.fieldname === 'attachedImages')
+      .map(f => f.filename);
 
     let videoLinks = [];
     if (req.body.videoLinks) {
@@ -16,7 +21,6 @@ router.post("/products", upload.fields([
         videoLinks = typeof req.body.videoLinks === 'string'
           ? JSON.parse(req.body.videoLinks)
           : req.body.videoLinks;
-        
         if (!Array.isArray(videoLinks)) videoLinks = [videoLinks];
       } catch (e) {
         videoLinks = [req.body.videoLinks];
@@ -26,15 +30,14 @@ router.post("/products", upload.fields([
     let parsedVideos = [];
     if (attachedVideos) {
       try {
-        parsedVideos = typeof attachedVideos === 'string' ? JSON.parse(attachedVideos) : attachedVideos;
+        parsedVideos = typeof attachedVideos === 'string'
+          ? JSON.parse(attachedVideos)
+          : attachedVideos;
         if (!Array.isArray(parsedVideos)) parsedVideos = [parsedVideos];
       } catch (e) {
         parsedVideos = [attachedVideos];
       }
     }
-
-    const images = req.files['images']?.map(f => f.filename) || [];
-    const attachedImages = req.files['attachedImages']?.map(f => f.filename) || [];
 
     const product = await Product.create({
       images,
