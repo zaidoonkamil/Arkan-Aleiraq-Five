@@ -56,6 +56,42 @@ router.post("/products", upload.any(), async (req, res) => {
   }
 });
 
+router.put("/products/:id", upload.any(), async (req, res) => {
+  try {
+    const product = await Product.findByPk(req.params.id);
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    const { description, size, colors } = req.body;
+
+    let newImages = [];
+    if (req.files && req.files.length > 0) {
+      newImages = req.files
+        .filter(f => f.fieldname === "images")
+        .map(f => f.filename);
+    }
+
+    product.description = description ?? product.description;
+    product.size = size ?? product.size;
+    product.colors = colors ?? product.colors;
+
+    if (newImages.length > 0) {
+      product.images = newImages;
+    }
+
+    await product.save();
+
+    res.status(200).json({
+      message: "Product updated successfully",
+      product,
+    });
+  } catch (err) {
+    console.error("❌ Error updating product:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 router.get("/products", async (req, res) => {
   try {
     const products = await Product.findAll();
