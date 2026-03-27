@@ -77,7 +77,7 @@ router.put("/products/:id", upload.any(), async (req, res) => {
     product.colors = colors ?? product.colors;
 
     if (newImages.length > 0) {
-      product.images = newImages;
+      product.images = [...(product.images || []), ...newImages];
     }
 
     await product.save();
