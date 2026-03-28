@@ -41,4 +41,18 @@ router.put("/details/:id", async (req, res) => {
     }
 });
 
+router.get("/details/:id", async (req, res) => {
+    try {
+        const details = await Details.findByPk(req.params.id);
+
+        if (!details) {
+            return res.status(404).json({ error: "Details not found" });
+        }
+        res.status(200).json(details);
+    } catch (err) {
+        console.error("❌ Error fetching details:", err);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
 module.exports = router;
