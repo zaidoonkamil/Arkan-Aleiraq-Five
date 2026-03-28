@@ -3,6 +3,7 @@ const UserDevice = require("./user_device");
 const NotificationLog = require("./notification_log");
 const Product = require("./product");
 const UserTask = require("./userTask");
+const Details = require("./details");
 
 User.hasMany(UserDevice, { foreignKey: 'user_id', as: 'devices', onDelete: 'CASCADE' });
 UserDevice.belongsTo(User, { foreignKey: 'user_id', as: 'user', onDelete: 'CASCADE' });
@@ -19,4 +20,5 @@ module.exports = {
   NotificationLog,
   Product,
   UserTask,
+  Details,
 };
